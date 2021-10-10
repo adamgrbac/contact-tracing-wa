@@ -104,12 +104,12 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
 
     col_names = list(df.columns)
-    df["severity"] = "Close"
-    df["data_date"] = pd.to_datetime(df["Exposure date"], format='%d/%m/%Y')
+    df["severity"] = df["Health advice"].apply(lambda x: "Casual" if "Monitor" in x else "Close")
+    df["data_date"] = df["Exposure date & time"].apply(lambda x: pd.to_datetime(x.split(" at ")[0], format='%d/%m/%Y'))
     df["data_location"] = df["Location"]
     df["data_suburb"] = df["Suburb"]
-    df["data_datetext"] = df["Exposure date"]
-    df["data_timetext"] = df["Exposure time"]
+    df["data_datetext"] = df["Exposure date & time"].apply(lambda x: x.split(" at ")[0])
+    df["data_timetext"] = df["Exposure date & time"].apply(lambda x: x.split(" at ")[1])
     df["data_added"] = df["Date updated"]
 
     df = df.drop(col_names, axis=1)

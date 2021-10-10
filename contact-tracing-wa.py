@@ -22,12 +22,13 @@ con = sqlite3.connect("contact_tracing_wa.db")
 utils.prep_database(con)
 
 # GET NSW Data
-res = requests.get("https://www.wa.gov.au/organisation/covid-communications/covid-19-coronavirus-locations-visited-confirmed-cases")
+res = requests.get("https://www.healthywa.wa.gov.au/Articles/A_E/Coronavirus/Locations-visited-by-confirmed-cases")
 
 # Parse page with bs4
 page = BeautifulSoup(res.text, 'html.parser')
 
-tables = page.find_all("table", {"class": "js-no-table"})
+locationDiv = page.find("div", {"class": "locationList"})
+tables = locationDiv.find_all("table")
 
 # Create empty list of dfs to merge later
 dfs = []
@@ -35,17 +36,24 @@ dfs = []
 # Extract data from each table
 for table in tables:
 
-    headers = [head.text for head in table.thead.tr.find_all("th")]
+    headers = ["all_data"]
+    headers.extend([head.text for head in table.thead.tr.find_all("th")])
 
     # Skip non-wa locations & flights
-    if headers[0] != "Exposure date":
+    if headers[1] != "Exposure date & time":
         continue
 
     # Convert <tr> attributes to list of dicts
     data = []
     for row in table.tbody.find_all("tr"):
         cells = [cell.text for cell in row.find_all("td")]
-        data.append(dict(zip(headers, cells)))
+        cell_data = dict(zip(headers, cells))
+        for time_row in cell_data["Exposure date & time"].split("\n"):
+            if "(not" in time_row:
+                continue
+            tmp_data = cell_data.copy()
+            tmp_data["Exposure date & time"] = time_row
+            data.append(tmp_data)
     
     # Convert list of dicts to DataFrame
     df = pd.DataFrame(data)
